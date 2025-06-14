@@ -21,6 +21,13 @@ export default function Home() {
         >
           Pet the Dog! 🐕
         </Link>
+        <Link 
+          href="/sneeze-game" 
+          className="text-2xl hover:text-red-400 transition-colors"
+          style={{ fontFamily: '"Geist Mono", mono' }}
+        >
+          Fake Sneeze! 🤧
+        </Link>
       </div>
     </main>
   )

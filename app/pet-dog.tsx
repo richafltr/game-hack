@@ -13,166 +13,121 @@ const PetDog = () => {
   const dogRef = useRef<HTMLDivElement>(null)
   const petStartTime = useRef<number | null>(null)
   const tailAnimation = useAnimation()
-  const whineSound = useRef<HTMLAudioElement | null>(null)
-  const winSound = useRef<HTMLAudioElement | null>(null)
-  const heartSound = useRef<HTMLAudioElement | null>(null)
 
-  useEffect(() => {
-    // Initialize sounds
-    whineSound.current = new Audio('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/sad-whine-4Hs0Hs0Hs0Hs0Hs0Hs0Hs0Hs0Hs0.mp3')
-    winSound.current = new Audio('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/happy-bark-4Hs0Hs0Hs0Hs0Hs0Hs0Hs0Hs0Hs0.mp3')
-    heartSound.current = new Audio('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/pop-4Hs0Hs0Hs0Hs0Hs0Hs0Hs0Hs0Hs0.mp3')
-  }, [])
+  // Handle mouse down on dog
+  const handlePetStart = (e: React.MouseEvent) => {
+    if (gameWon || gameLost) return
+    setIsPetting(true)
+    petStartTime.current = Date.now()
+    // Start tail wagging animation
+    tailAnimation.start({
+      rotate: [0, 20, 0, -20, 0],
+      transition: { duration: 1, repeat: Infinity }
+    })
+  }
 
-  // Tail wagging animation
-  useEffect(() => {
-    if (isPetting) {
-      tailAnimation.start({
-        rotate: [0, 20, 0, -20, 0],
-        transition: {
-          duration: 0.5,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }
-      })
-    } else {
-      tailAnimation.stop()
-    }
-  }, [isPetting, tailAnimation])
-
-  // Heart spawning and petting timer
-  useEffect(() => {
+  // Handle mouse up or leave
+  const handlePetEnd = () => {
     if (!isPetting) return
+    setIsPetting(false)
+    petStartTime.current = null
+    setGameLost(true)
+    tailAnimation.stop()
+  }
 
-    const spawnHeart = () => {
-      if (!dogRef.current) return
-      const rect = dogRef.current.getBoundingClientRect()
-      const x = rect.left + Math.random() * rect.width
-      const y = rect.top + Math.random() * (rect.height / 2)
-      
-      setHearts(prev => [...prev, { id: Date.now(), x, y }])
-      if (heartSound.current) {
-        heartSound.current.currentTime = 0
-        heartSound.current.play()
-      }
-    }
-
+  // Update petting progress
+  useEffect(() => {
+    if (!isPetting || gameWon) return
+    
     const interval = setInterval(() => {
       if (petStartTime.current) {
         const elapsed = Date.now() - petStartTime.current
         setPetTime(elapsed)
+        
+        // Spawn heart every second
+        if (elapsed % HEART_SPAWN_INTERVAL < 100) {
+          const heartX = Math.random() * 100 - 50 // Random x position
+          setHearts(prev => [...prev, { 
+            id: Date.now(),
+            x: heartX,
+            y: -20
+          }])
+        }
+
+        // Check for win condition
         if (elapsed >= PET_DURATION) {
           setGameWon(true)
-          if (winSound.current) winSound.current.play()
-          clearInterval(interval)
-        } else {
-          spawnHeart()
+          setIsPetting(false)
         }
       }
-    }, HEART_SPAWN_INTERVAL)
+    }, 100)
 
     return () => clearInterval(interval)
-  }, [isPetting])
+  }, [isPetting, gameWon])
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (gameWon || gameLost) return
-    setIsPetting(true)
-    petStartTime.current = Date.now()
-  }
-
-  const handleMouseUp = () => {
-    if (gameWon) return
-    if (isPetting && petTime < PET_DURATION) {
-      setGameLost(true)
-      if (whineSound.current) whineSound.current.play()
-    }
-    setIsPetting(false)
-    petStartTime.current = null
-  }
-
-  const handleMouseLeave = () => {
-    if (isPetting && !gameWon) {
-      setGameLost(true)
-      if (whineSound.current) whineSound.current.play()
-    }
-    setIsPetting(false)
-    petStartTime.current = null
-  }
-
-  const resetGame = () => {
-    setGameWon(false)
-    setGameLost(false)
-    setPetTime(0)
-    setHearts([])
-    petStartTime.current = null
-  }
+  // Clean up old hearts
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHearts(prev => prev.filter(heart => Date.now() - heart.id < 2000))
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
-    <div 
-      className="relative w-screen h-screen flex items-center justify-center"
-      style={{ backgroundColor: '#89CFF0' }} // Sky blue background
-    >
+    <div className="relative w-full h-screen bg-[#89CFF0] flex items-center justify-center overflow-hidden">
       {/* Grass */}
-      <div 
-        className="absolute bottom-0 w-full h-1/3"
-        style={{ backgroundColor: '#7FB069' }} // Grass green
-      />
-
+      <div className="absolute bottom-0 w-full h-1/4 bg-[#7FB069]" />
+      
       {/* Dog */}
-      <div
+      <div 
         ref={dogRef}
-        className="relative cursor-pointer"
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
+        className="relative"
+        onMouseDown={handlePetStart}
+        onMouseUp={handlePetEnd}
+        onMouseLeave={handlePetEnd}
       >
-        {/* Dog body - crayon style */}
-        <motion.div
-          className="w-48 h-32 rounded-3xl"
-          style={{ backgroundColor: '#B5651D' }} // Dog brown
-          animate={isPetting ? { scale: [1, 1.05, 1] } : {}}
-          transition={{ duration: 0.5, repeat: Infinity }}
-        >
-          {/* Dog head */}
-          <div 
-            className="absolute -top-16 left-32 w-24 h-24 rounded-full"
-            style={{ backgroundColor: '#B5651D' }}
-          >
-            {/* Eyes */}
-            <div className="absolute top-8 left-4 w-4 h-4 bg-black rounded-full" />
-            <div className="absolute top-8 right-4 w-4 h-4 bg-black rounded-full" />
-            {/* Nose */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-6 h-4 bg-black rounded-full" />
+        {/* Dog body - brown crayon style */}
+        <div className="w-48 h-48 bg-[#B5651D] rounded-3xl relative cursor-pointer
+                      transform hover:scale-105 transition-transform
+                      border-4 border-[#8B4513] shadow-lg">
+          {/* Dog face */}
+          <div className="absolute top-6 left-1/2 transform -translate-x-1/2">
+            <div className="w-24 h-16 bg-[#B5651D] rounded-full border-4 border-[#8B4513]">
+              {/* Eyes */}
+              <div className="flex justify-center gap-6 mt-2">
+                <div className="w-3 h-3 bg-black rounded-full" />
+                <div className="w-3 h-3 bg-black rounded-full" />
+              </div>
+              {/* Nose */}
+              <div className="w-4 h-4 bg-black rounded-full mx-auto mt-2" />
+            </div>
           </div>
           
           {/* Tail */}
           <motion.div
-            className="absolute -right-8 top-1/2 w-12 h-4 rounded-full origin-left"
-            style={{ backgroundColor: '#B5651D' }}
             animate={tailAnimation}
+            className="absolute -right-8 top-1/2 w-12 h-4 bg-[#B5651D] origin-left
+                     border-2 border-[#8B4513] rounded-full"
           />
-        </motion.div>
+        </div>
       </div>
 
       {/* Hearts */}
       {hearts.map(heart => (
         <motion.div
           key={heart.id}
+          initial={{ y: heart.y, x: heart.x, opacity: 1 }}
+          animate={{ y: heart.y - 100, opacity: 0 }}
+          transition={{ duration: 2, ease: "easeOut" }}
           className="absolute text-2xl"
-          initial={{ x: heart.x, y: heart.y, opacity: 1, scale: 0 }}
-          animate={{ y: heart.y - 100, opacity: 0, scale: 1 }}
-          transition={{ duration: 1 }}
-          onAnimationComplete={() => {
-            setHearts(prev => prev.filter(h => h.id !== heart.id))
-          }}
         >
           ❤️
         </motion.div>
       ))}
 
       {/* Progress bar */}
-      {isPetting && !gameWon && !gameLost && (
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-64 h-4 bg-white rounded-full overflow-hidden">
+      {isPetting && !gameWon && (
+        <div className="absolute top-10 left-1/2 transform -translate-x-1/2 w-64 h-4 bg-white rounded-full overflow-hidden">
           <div 
             className="h-full bg-pink-500 transition-all duration-100"
             style={{ width: `${(petTime / PET_DURATION) * 100}%` }}
@@ -181,18 +136,35 @@ const PetDog = () => {
       )}
 
       {/* Game over messages */}
-      {(gameWon || gameLost) && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
-          <h1 className="text-4xl font-bold mb-4">
-            {gameWon ? "Good job! The dog loves you! 🐕" : "Aww, try again! 🐾"}
-          </h1>
-          <button
-            className="px-4 py-2 bg-white rounded-full shadow-lg hover:bg-gray-100"
-            onClick={resetGame}
-          >
-            Play Again
-          </button>
+      {gameWon && (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2
+                      text-4xl font-bold text-pink-500 bg-white p-6 rounded-xl shadow-lg">
+          You made the dog very happy! 🎉
         </div>
+      )}
+      
+      {gameLost && !gameWon && (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2
+                      text-4xl font-bold text-red-500 bg-white p-6 rounded-xl shadow-lg">
+          The dog needs more pets! Try again!
+        </div>
+      )}
+
+      {/* Reset button */}
+      {(gameWon || gameLost) && (
+        <button
+          onClick={() => {
+            setGameWon(false)
+            setGameLost(false)
+            setPetTime(0)
+            setHearts([])
+          }}
+          className="absolute bottom-10 left-1/2 transform -translate-x-1/2
+                   bg-white text-pink-500 px-6 py-3 rounded-full text-xl font-bold
+                   hover:bg-pink-100 transition-colors"
+        >
+          Play Again
+        </button>
       )}
     </div>
   )
