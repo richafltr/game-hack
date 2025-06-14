@@ -15,8 +15,8 @@ function VRMAvatar({ cheekInflation }: { cheekInflation: number }) {
   return (
     <primitive 
       object={gltf.scene} 
-      scale={[2, 2, 2]} 
-      position={[0, -1, 0]}
+      scale={[3, 3, 3]} 
+      position={[0, -2, 2]}
       rotation={[0, 0, 0]}
     />
   )
@@ -31,6 +31,13 @@ const SneezeGame = () => {
   const [showChoo, setShowChoo] = useState(false)
   const gameStartTime = useRef<number | null>(null)
   const animationFrame = useRef<number>()
+  const sneezeSound = useRef<HTMLAudioElement | null>(null)
+
+  // Initialize sound effect
+  useEffect(() => {
+    sneezeSound.current = new Audio('https://xz3j1twrmcso98lj.public.blob.vercel-storage.com/misc-assets/sneeze-81009-3ZgapiaRDZ7SgywEEJXTMTMNmqN3f6.mp3')
+    sneezeSound.current.volume = 0.7
+  }, [])
 
   // Handle keyboard input
   useEffect(() => {
@@ -75,6 +82,11 @@ const SneezeGame = () => {
         if (sPresses >= WIN_THRESHOLD) {
           setGameState('won')
           setShowChoo(true)
+          // Play sneeze sound
+          if (sneezeSound.current) {
+            sneezeSound.current.currentTime = 0
+            sneezeSound.current.play().catch(console.error)
+          }
         } else {
           setGameState('lost')
         }
@@ -96,6 +108,11 @@ const SneezeGame = () => {
     if (gameState === 'playing' && sPresses >= WIN_THRESHOLD) {
       setGameState('won')
       setShowChoo(true)
+      // Play sneeze sound
+      if (sneezeSound.current) {
+        sneezeSound.current.currentTime = 0
+        sneezeSound.current.play().catch(console.error)
+      }
     }
   }, [sPresses, gameState])
 
@@ -122,9 +139,10 @@ const SneezeGame = () => {
       
       {/* 3D Character */}
       <div className="absolute inset-0">
-        <Canvas camera={{ position: [0, 0, 5], fov: 50 }}>
-          <ambientLight intensity={0.8} />
-          <directionalLight position={[10, 10, 5]} intensity={1} />
+        <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
+          <ambientLight intensity={1} />
+          <directionalLight position={[5, 5, 5]} intensity={1.2} />
+          <pointLight position={[0, 2, 4]} intensity={0.8} />
           <Suspense fallback={null}>
             <VRMAvatar cheekInflation={cheekInflation} />
           </Suspense>
